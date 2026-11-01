@@ -115,7 +115,7 @@ pnpm install
 pnpm dev          # api on :8787 and web on :5173
 ```
 
-Open http://localhost:5173. The starter page shows a title. `/api/health` returns `{ "status": "ok" }`.
+Open http://localhost:5173 to use the app: create a home, add members, add bills, and pay shares. `/api/health` returns `{ "status": "ok" }`.
 
 ```bash
 pnpm test         # run the visible tests in api/test
