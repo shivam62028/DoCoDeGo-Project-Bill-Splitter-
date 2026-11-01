@@ -1,0 +1,6 @@
+packages:
+  - api
+  - web
+allowBuilds:
+  esbuild: true
+  workerd: true
