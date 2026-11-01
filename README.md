@@ -155,3 +155,11 @@ You must understand every line you submit. We check this with your video and in 
 5. Paste the repository link and the video link in the application form.
 
 We will run `pnpm install && pnpm check && pnpm typecheck && pnpm test` on your repository.
+
+## Decisions
+
+1. **Join order comes from SQLite's `rowid`, not a timestamp.** The extra cents and the balances list must follow the order members were added. Two members inserted within the same millisecond would tie on a `created_at` column and make that order random. SQLite assigns every row an increasing implicit `rowid` on insert, so `ORDER BY rowid` _is_ the insertion order — no extra column, no clock, no tie-breaking bug.
+
+2. **Payments use a conditional `UPDATE` (compare-and-set) and store the idempotency key on the share row.** The pay endpoint never does `read-then-write` on the paid flag: it runs `UPDATE shares SET paid_at = ?, idempotency_key = ? WHERE id = ? AND paid_at IS NULL` and checks how many rows changed. D1 serializes writes, so when two requests pay the same share at the same time, exactly one `UPDATE` changes a row; the loser re-reads the row and either replays the same key's result (200) or answers 409. Retries with the same key find the stored key and return the original `paidAt`, so the answer is idempotent and no share can ever be paid twice.
+
+3. **A bill and its shares are created in one atomic `DB.batch`, and the database is the last line of defense.** The bill row and every share row are inserted in a single transaction, so a crash halfway through can never leave a bill without some of its shares. The schema also carries the rules the API enforces — `CHECK (total_cents > 0)`, `CHECK (amount_cents > 0)`, the foreign keys, and `UNIQUE (bill_id, member_id)` — so even a bug in application code cannot persist a negative bill or a double share.
