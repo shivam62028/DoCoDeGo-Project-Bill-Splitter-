@@ -196,6 +196,9 @@ function Dashboard({ home, onLeave }: { home: StoredHome; onLeave: () => void })
           </ul>
         )}
         <AddMemberForm homeId={home.id} onAdded={addMember} />
+        <p style={styles.hint}>
+          New members join future bills — existing bills keep their original split.
+        </p>
       </section>
 
       <section style={styles.card}>
@@ -433,6 +436,7 @@ const styles = {
     cursor: 'pointer',
   } as const,
   muted: { color: '#6b7280', margin: 0 } as const,
+  hint: { color: '#8b909a', fontSize: 13, margin: 0 } as const,
   errorText: { color: '#b42318', margin: 0 } as const,
   errorBanner: {
     background: '#fdecea',
