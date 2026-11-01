@@ -107,6 +107,38 @@ app.post('/api/homes/:homeId/bills', async (c) => {
   return c.json({ id: billId, homeId, title: body.title, totalCents, shares }, 201)
 })
 
+// Lists the bills of a home with their shares, newest last.
+// Two plain queries joined in code: easier to read than one grouped SQL query.
+app.get('/api/homes/:homeId/bills', async (c) => {
+  const homeId = c.req.param('homeId')
+
+  const home = await c.env.DB.prepare('SELECT id FROM homes WHERE id = ?').bind(homeId).first()
+  if (!home) {
+    return c.json({ error: 'home not found' }, 404)
+  }
+
+  const { results: bills } = await c.env.DB.prepare(
+    'SELECT id, home_id AS homeId, title, total_cents AS totalCents FROM bills WHERE home_id = ? ORDER BY rowid',
+  )
+    .bind(homeId)
+    .all()
+  const { results: shares } = await c.env.DB.prepare(
+    `SELECT s.id, s.bill_id AS billId, s.member_id AS memberId, s.amount_cents AS amountCents, s.paid_at AS paidAt
+     FROM shares s JOIN bills b ON b.id = s.bill_id
+     WHERE b.home_id = ?
+     ORDER BY s.rowid`,
+  )
+    .bind(homeId)
+    .all()
+
+  return c.json({
+    bills: bills.map((bill) => ({
+      ...bill,
+      shares: shares.filter((share) => share.billId === bill.id),
+    })),
+  })
+})
+
 // Pays one share. The Idempotency-Key makes retries safe:
 // - same key on the same share  -> 200 with the original result (no double pay)
 // - different key on a paid share -> 409
